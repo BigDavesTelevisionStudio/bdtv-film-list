@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Item {
+  id         String    @id @default(cuid())
+  imdbId     String    @unique
+  title      String
+  type       String
+  poster     String?
+  year       String?
+  genre      String?
+  imdbRating String?
+  plot       String?
+  director   String?
+  actors     String?
+  sortOrder  Int       @default(0)
+  watched    Boolean   @default(false)
+  watchedAt  DateTime?
+  addedAt    DateTime  @default(now())
+  seasons    Season[]
+}
+
+model Season {
+  id           String    @id @default(cuid())
+  itemId       String
+  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  seasonNumber Int
+  episodes     Episode[]
+
+  @@unique([itemId, seasonNumber])
+}
+
+model Episode {
+  id            String    @id @default(cuid())
+  seasonId      String
+  season        Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  episodeNumber Int
+  title         String
+  imdbId        String?
+  watched       Boolean   @default(false)
+  watchedAt     DateTime?
+
+  @@unique([seasonId, episodeNumber])
+}
+
+model Recommendation {
+  id         String    @id @default(cuid())
+  imdbId     String
+  title      String
+  type       String
+  poster     String?
+  year       String?
+  genre      String?
+  imdbRating String?
+  suggestedBy String
+  message    String?
+  status     String    @default("pending")
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+}
