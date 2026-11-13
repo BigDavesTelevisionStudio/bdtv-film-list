@@ -6,9 +6,11 @@ const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
 // --- Simple sliding-window rate limiter (in-memory per edge instance) ---
 // Good enough to stop casual hammering. Limits per IP.
+// Keys are "METHOD path" and match the path exactly, so admin routes under
+// /api/recommendations/* (approve, delete, bulk, existing) are not throttled.
 const LIMITS: Record<string, { requests: number; windowMs: number }> = {
-  "/api/imdb/search":      { requests: 20, windowMs: 60_000 },  // 20/min
-  "/api/recommendations":  { requests: 5,  windowMs: 60_000 },  // 5/min
+  "GET /api/imdb/search":       { requests: 20, windowMs: 60_000 },  // 20/min
+  "POST /api/recommendations":  { requests: 5,  windowMs: 60_000 },  // 5/min
 };
 
 // ip -> { route -> timestamps[] }
@@ -41,7 +43,8 @@ function getIp(req: NextRequest): string {
 export default clerkMiddleware(async (auth, req) => {
   // Rate limit public API routes
   const pathname = req.nextUrl.pathname;
-  const limitedRoute = Object.keys(LIMITS).find((r) => pathname.startsWith(r));
+  const key = `${req.method} ${pathname.replace(/\/+$/, "")}`;
+  const limitedRoute = key in LIMITS ? key : undefined;
   if (limitedRoute) {
     const ip = getIp(req);
     if (isRateLimited(ip, limitedRoute)) {
